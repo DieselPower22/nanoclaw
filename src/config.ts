@@ -9,6 +9,7 @@ const envConfig = readEnvFile([
   'ASSISTANT_NAME',
   'ASSISTANT_HAS_OWN_NUMBER',
   'ONECLI_URL',
+  'SESSION_HOOK',
   'TZ',
 ]);
 
@@ -94,3 +95,8 @@ function resolveConfigTimezone(): string {
   return 'UTC';
 }
 export const TIMEZONE = resolveConfigTimezone();
+
+// Shell command to run when an agent session produces output.
+// Available env vars: GROUP_FOLDER, TASK_TITLE, TASK_SUMMARY
+export const SESSION_HOOK =
+  process.env.SESSION_HOOK || envConfig.SESSION_HOOK || '';

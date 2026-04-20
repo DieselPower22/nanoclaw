@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -12,6 +13,7 @@ import {
   MAX_MESSAGES_PER_PROMPT,
   ONECLI_URL,
   POLL_INTERVAL,
+  SESSION_HOOK,
   TIMEZONE,
 } from './config.js';
 import './channels/index.js';
@@ -296,6 +298,7 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       if (text) {
         await channel.sendMessage(chatJid, text);
         outputSentToUser = true;
+        runSessionHook(group.folder, group.name, prompt, text);
       }
       // Only reset idle timer on actual results, not session-update markers (result: null)
       resetIdleTimer();
@@ -436,6 +439,26 @@ async function runAgent(
     logger.error({ group: group.name, err }, 'Agent error');
     return 'error';
   }
+}
+
+function runSessionHook(
+  groupFolder: string,
+  groupName: string,
+  prompt: string,
+  summary: string,
+): void {
+  if (!SESSION_HOOK) return;
+  const title = prompt.split('\n')[0].slice(0, 120);
+  const env = {
+    ...process.env,
+    GROUP_FOLDER: groupFolder,
+    GROUP_NAME: groupName,
+    TASK_TITLE: title,
+    TASK_SUMMARY: summary,
+  };
+  const child = spawn('bash', ['-c', SESSION_HOOK], { env, stdio: 'ignore', detached: true });
+  child.unref();
+  logger.info({ groupFolder, title }, 'Session hook fired');
 }
 
 async function startMessageLoop(): Promise<void> {
